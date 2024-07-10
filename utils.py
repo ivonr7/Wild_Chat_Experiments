@@ -5,7 +5,7 @@ import pandas as pd
 import os
 from tqdm import tqdm
 from itertools import chain
-
+import pyarrow.dataset as ds
 
 def make_rows(time,chat):
     for i in range(0,len(chat)-1,2):
@@ -47,6 +47,10 @@ def check_trace(trace_path:str):
         except UnicodeEncodeError:
             yield i,trace.iloc[i]['question']
 
+
+    
+
+
 if __name__ == '__main__':
     # dataset_folder = r"D:\school stuff\Research\wildchat"
 
@@ -57,14 +61,14 @@ if __name__ == '__main__':
     #     columns=['index','question','answer'],
     # ).to_json('./trace.csv',orient = 'columns')
 
-    trace_path = './trace.csv'
-    errors = check_trace(trace_path=trace_path)
+    # trace_path = './trace.csv'
+    # errors = check_trace(trace_path=trace_path)
 
-    with open('./errors.json','w') as f:
-        f.write(
-            pd.DataFrame(
-                list(errors)
-            ).to_json(orient='records',lines=True)
-        )
+    # with open('./errors.json','w') as f:
+    #     f.write(
+    #         pd.DataFrame(
+    #             list(errors)
+    #         ).to_json(orient='records',lines=True)
+    #     )
 
 
