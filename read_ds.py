@@ -4,11 +4,11 @@ import pyarrow.compute as pc
 import pyarrow as pa
 import os
 from datetime import datetime
-# from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer
 from itertools import chain,repeat
 from tqdm import tqdm
 import numpy as np
-
+from torch import cuda
 
 # Base Class for working with wildchat dataset
 class WildChat:
@@ -35,7 +35,12 @@ class WildChat:
             month = months
 
         self.end = datetime(year,month,self.start.day)
-
+    def get_uniques(self,col:str): #get all unique values in a column
+        projection = {
+            col:col
+        }
+        return np.unique(self.data.to_table(columns = projection).to_pandas())
+    
     def to_pandas(self) -> pd.DataFrame: # memory intensive!!
         return self.data.to_table(filter = ds.field('timestamp') <= self.end).to_pandas()
     def to_disk(self,out_folder:str): # write filtered dataset to file
@@ -49,28 +54,30 @@ class WildChat:
             format = 'parquet'
         )
     @staticmethod
-    def write_question_w_embeddings(folder:str,*,embedding_model:str='all-MiniLM-L6-v2'):
+    #TODO read in filter list directly
+    def write_question_w_embeddings(folder:str,*,
+                                    embedding_model:str='all-MiniLM-L6-v2',
+                                    model_filter:str = 'gpt-3.5-turbo-0301',
+                                    language_filter:str = 'English'
+                                    ):
         assert os.path.exists(folder)
 
         # Read question and timestamp column
-        data = ds.dataset(folder,format='parquet')
-        data = data.filter(pc.field('language') == "English")
-        trace = {
-            'timestamp':ds.field('timestamp'),
-            'chat':ds.field('conversation')
-        }
-        dataset = data.to_table(columns = trace).to_pandas() # send table to pandas will blow up with high memory
+
+        # Filter dataset for interesting info
+        dataset = pd.read_parquet(folder,filters = [('language', '==', language_filter),
+                                 ('model', '==' ,model_filter)],columns = ['timestamp','conversation'])
+         
         questions = []
-        # embedder = SentenceTransformer(embedding_model)
-        for row in tqdm(dataset[['timestamp','chat']].itertuples(),desc="Getting Questions"):
+        embedder = SentenceTransformer(embedding_model)
+        for row in tqdm(dataset[['timestamp','conversation']].itertuples(),desc="Getting Questions"):
             timestamp, chat = row[1], row[2]
             for i in range(0,len(chat)-1,2):
                 questions.append([timestamp,chat[i]['content']])
         del dataset
         questions = pd.DataFrame(questions,columns=['timestamp','question'])
-        print(questions.head())
-        # embeddings = embedder.encode(questions['question'],show_progress_bar=True)
-
+        embeddings = embedder.encode(questions['question'],show_progress_bar=True,convert_to_numpy=True)
+        questions['embedding'] = embeddings.tolist()
 
 
         questions.to_json('embedded_questions.json',orient='columns')
@@ -97,7 +104,9 @@ class WildChat:
 
 if __name__ == "__main__":
     folder = r'D:\school stuff\Research\wildchat'
-    wchat = WildChat(folder)
-    wchat.month_range(2)
+    print(f"ON {'GPU' if cuda.is_available() else 'CPU'}")
+    # wchat = WildChat(folder)
+    # wchat.month_range(2)
+    print(os.getcwd())
     WildChat.write_question_w_embeddings(r'./wildchat_data_29_days')
     # wchat.to_disk('./')
