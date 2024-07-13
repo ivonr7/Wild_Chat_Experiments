@@ -6,6 +6,7 @@ import os
 from tqdm import tqdm
 from itertools import chain
 import pyarrow.dataset as ds
+import numpy as np
 
 def make_rows(time,chat):
     for i in range(0,len(chat)-1,2):
@@ -48,27 +49,13 @@ def check_trace(trace_path:str):
             yield i,trace.iloc[i]['question']
 
 
+# simple cosine similarity for testing
+def cos_sim(v1:np.ndarray,v2:np.ndarray,*, make_positive:bool = False) -> np.float32:
+    dist = np.dot(v1,v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)) 
+    return np.abs(dist) if make_positive else dist
     
 
 
 if __name__ == '__main__':
-    # dataset_folder = r"D:\school stuff\Research\wildchat"
-
-    # trace = make_trace(dataset_folder=dataset_folder)
-
-    # pd.DataFrame(
-    #     trace,
-    #     columns=['index','question','answer'],
-    # ).to_json('./trace.csv',orient = 'columns')
-
-    # trace_path = './trace.csv'
-    # errors = check_trace(trace_path=trace_path)
-
-    # with open('./errors.json','w') as f:
-    #     f.write(
-    #         pd.DataFrame(
-    #             list(errors)
-    #         ).to_json(orient='records',lines=True)
-    #     )
-
+    pass
 
