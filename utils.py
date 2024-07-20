@@ -7,6 +7,10 @@ from tqdm import tqdm
 from itertools import chain
 import pyarrow.dataset as ds
 import numpy as np
+import regex as re
+from typing import Iterable
+from sentence_transformers import SentenceTransformer
+
 
 def make_rows(time,chat):
     for i in range(0,len(chat)-1,2):
@@ -33,8 +37,6 @@ def make_trace(dataset_folder:str):
         chats = df['conversation']
         for chat in tqdm(chats):
             traces.append(make_rows(time,chat))
-
-
     return chain(*traces)
     
 # chack if trace is actually in english
@@ -48,6 +50,16 @@ def check_trace(trace_path:str):
         except UnicodeEncodeError:
             yield i,trace.iloc[i]['question']
 
+#eliminate stop characters ". | , * ! ? u\*"
+#remove unicode
+unicode_pattern = re.compile(r'\\u\w+|\p{P}')
+def remove_stop_chars(s:str):
+    return re.sub(unicode_pattern,'',s)
+
+# return jaccard similarity
+def jaccard(a:set,b:set) -> float:
+    return len(a.intersection(b)) / len(a.union(b))
+
 
 # simple cosine similarity for testing
 def cos_sim(v1:np.ndarray,v2:np.ndarray,*, make_positive:bool = False) -> np.float32:
@@ -56,6 +68,17 @@ def cos_sim(v1:np.ndarray,v2:np.ndarray,*, make_positive:bool = False) -> np.flo
     
 
 
+#Simple embedding function using Sentence transformer library
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
+def embed(strings:Iterable | str) -> np.ndarray:
+    
+    return embedder.encode(
+        strings,
+        show_progress_bar=True,
+        convert_to_numpy=True
+    )
+    
 if __name__ == '__main__':
-    pass
+    s = r"hello from the \u1f60 other Side!"
+    print(remove_stop_chars(s))
 
