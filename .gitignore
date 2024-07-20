@@ -7,3 +7,9 @@
 
 # wildchat datafolders
 wildchat_*
+
+#oython stuff
+*__pycache__*
+*lib
+#graph view
+*.html
