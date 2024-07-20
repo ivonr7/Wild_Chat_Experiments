@@ -55,10 +55,11 @@ class WildChat:
         )
     @staticmethod
     #TODO read in filter list directly
-    def write_question_w_embeddings(folder:str,*,
+    def write_question_w_embeddings(folder:str,out_file,*,
                                     embedding_model:str='all-MiniLM-L6-v2',
                                     model_filter:str = 'gpt-3.5-turbo-0301',
-                                    language_filter:str = 'English'
+                                    language_filter:str = 'English',
+                                    toxic:bool=False
                                     ):
         assert os.path.exists(folder)
 
@@ -66,7 +67,8 @@ class WildChat:
 
         # Filter dataset for interesting info
         dataset = pd.read_parquet(folder,filters = [('language', '==', language_filter),
-                                 ('model', '==' ,model_filter)],columns = ['timestamp','conversation'])
+                                 ('model', '==' ,model_filter),
+                                 ('toxic','==',toxic)],columns = ['timestamp','conversation'])
          
         questions = []
         embedder = SentenceTransformer(embedding_model)
@@ -80,7 +82,7 @@ class WildChat:
         questions['embedding'] = embeddings.tolist()
 
 
-        questions.to_json('embedded_questions.json',orient='columns')
+        questions.to_json(out_file,orient='columns')
 
         
 
@@ -105,8 +107,10 @@ class WildChat:
 if __name__ == "__main__":
     folder = r'D:\school stuff\Research\wildchat'
     print(f"ON {'GPU' if cuda.is_available() else 'CPU'}")
-    # wchat = WildChat(folder)
-    # wchat.month_range(2)
-    print(os.getcwd())
-    WildChat.write_question_w_embeddings(r'./wildchat_data_29_days')
-    # wchat.to_disk('./')
+    wchat = WildChat(folder)
+    for i in tqdm([1,3,12],desc="Writing datasets"):
+        wchat.month_range(i)
+        # wchat.to_disk('./')
+
+    for dataset in ['./wildchat_data_29_days','wildchat_data_90_days','wildchat_data_487_days']:
+        WildChat.write_question_w_embeddings(dataset,dataset+'.json',)
